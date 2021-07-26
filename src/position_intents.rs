@@ -15,21 +15,19 @@ pub enum UpdatePolicy {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum AmountSpec {
+pub enum Amount {
     Dollars(Decimal),
     Shares(Decimal),
-    Percent(Decimal),
     Zero,
 }
-impl AmountSpec {
+impl Amount {
     pub fn merge(self, other: Self) -> Result<Self, Error> {
         match (self, other) {
-            (AmountSpec::Dollars(x), AmountSpec::Dollars(y)) => Ok(AmountSpec::Dollars(x + y)),
-            (AmountSpec::Shares(x), AmountSpec::Shares(y)) => Ok(AmountSpec::Shares(x + y)),
-            (AmountSpec::Percent(x), AmountSpec::Percent(y)) => Ok(AmountSpec::Percent(x + y)),
-            (AmountSpec::Zero, AmountSpec::Zero) => Ok(AmountSpec::Zero),
-            (AmountSpec::Zero, y) => Ok(y),
-            (x, AmountSpec::Zero) => Ok(x),
+            (Amount::Dollars(x), Amount::Dollars(y)) => Ok(Amount::Dollars(x + y)),
+            (Amount::Shares(x), Amount::Shares(y)) => Ok(Amount::Shares(x + y)),
+            (Amount::Zero, Amount::Zero) => Ok(Amount::Zero),
+            (Amount::Zero, y) => Ok(y),
+            (x, Amount::Zero) => Ok(x),
             (x, y) => Err(Error::IncompatibleAmountError(x, y)),
         }
     }
@@ -37,12 +35,12 @@ impl AmountSpec {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum TickerSpec {
+pub enum Identifier {
     Ticker(String),
     All,
 }
 
-impl<T: ToString> From<T> for TickerSpec {
+impl<T: ToString> From<T> for Identifier {
     fn from(s: T) -> Self {
         Self::Ticker(s.to_string())
     }
@@ -52,8 +50,8 @@ impl<T: ToString> From<T> for TickerSpec {
 pub struct PositionIntentBuilder {
     strategy: String,
     sub_strategy: Option<String>,
-    ticker: TickerSpec,
-    amount: AmountSpec,
+    identifier: Identifier,
+    amount: Amount,
     update_policy: UpdatePolicy,
     decision_price: Option<Decimal>,
     limit_price: Option<Decimal>,
@@ -104,9 +102,9 @@ impl PositionIntentBuilder {
                 return Err(Error::InvalidBeforeAfter(before, after));
             }
         }
-        match (self.ticker.clone(), self.amount.clone()) {
-            (TickerSpec::All, AmountSpec::Dollars(_)) => return Err(Error::InvalidCombination),
-            (TickerSpec::All, AmountSpec::Shares(_)) => return Err(Error::InvalidCombination),
+        match (self.identifier.clone(), self.amount.clone()) {
+            (Identifier::All, Amount::Dollars(_)) => return Err(Error::InvalidCombination),
+            (Identifier::All, Amount::Shares(_)) => return Err(Error::InvalidCombination),
             _ => (),
         }
         Ok(PositionIntent {
@@ -114,7 +112,7 @@ impl PositionIntentBuilder {
             strategy: self.strategy,
             sub_strategy: self.sub_strategy,
             timestamp: Utc::now(),
-            ticker: self.ticker,
+            identifier: self.identifier,
             amount: self.amount,
             update_policy: self.update_policy,
             decision_price: self.decision_price,
@@ -138,8 +136,8 @@ pub struct PositionIntent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_strategy: Option<String>,
     pub timestamp: DateTime<Utc>,
-    pub ticker: TickerSpec,
-    pub amount: AmountSpec,
+    pub identifier: Identifier,
+    pub amount: Amount,
     pub update_policy: UpdatePolicy,
     /// The price at which the decision was made to send a position request. This can be used by
     /// other parts of the app for execution analysis. This field might also be used for
@@ -159,13 +157,13 @@ pub struct PositionIntent {
 impl PositionIntent {
     pub fn builder(
         strategy: impl Into<String>,
-        ticker: impl Into<TickerSpec>,
-        amount: AmountSpec,
+        identifier: impl Into<Identifier>,
+        amount: Amount,
     ) -> PositionIntentBuilder {
         PositionIntentBuilder {
             strategy: strategy.into(),
             sub_strategy: None,
-            ticker: ticker.into(),
+            identifier: identifier.into(),
             amount,
             update_policy: UpdatePolicy::Update,
             decision_price: None,
@@ -184,7 +182,7 @@ mod test {
 
     #[test]
     fn can_construct_position_intent() {
-        let builder = PositionIntent::builder("A", "AAPL", AmountSpec::Dollars(Decimal::new(1, 0)));
+        let builder = PositionIntent::builder("A", "AAPL", Amount::Dollars(Decimal::new(1, 0)));
         let _intent = builder
             .sub_strategy("B")
             .decision_price(Decimal::new(2, 0))
@@ -199,7 +197,7 @@ mod test {
 
     #[test]
     fn can_serialize_and_deserialize() {
-        let builder = PositionIntent::builder("A", "AAPL", AmountSpec::Shares(Decimal::new(1, 0)));
+        let builder = PositionIntent::builder("A", "AAPL", Amount::Shares(Decimal::new(1, 0)));
         let intent = builder
             .sub_strategy("B")
             .decision_price(Decimal::new(2, 0))

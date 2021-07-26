@@ -35,12 +35,12 @@ impl Amount {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum TickerSpec {
+pub enum Identifier {
     Ticker(String),
     All,
 }
 
-impl<T: ToString> From<T> for TickerSpec {
+impl<T: ToString> From<T> for Identifier {
     fn from(s: T) -> Self {
         Self::Ticker(s.to_string())
     }
@@ -50,7 +50,7 @@ impl<T: ToString> From<T> for TickerSpec {
 pub struct PositionIntentBuilder {
     strategy: String,
     sub_strategy: Option<String>,
-    ticker: TickerSpec,
+    identifier: Identifier,
     amount: Amount,
     update_policy: UpdatePolicy,
     decision_price: Option<Decimal>,
@@ -102,9 +102,9 @@ impl PositionIntentBuilder {
                 return Err(Error::InvalidBeforeAfter(before, after));
             }
         }
-        match (self.ticker.clone(), self.amount.clone()) {
-            (TickerSpec::All, Amount::Dollars(_)) => return Err(Error::InvalidCombination),
-            (TickerSpec::All, Amount::Shares(_)) => return Err(Error::InvalidCombination),
+        match (self.identifier.clone(), self.amount.clone()) {
+            (Identifier::All, Amount::Dollars(_)) => return Err(Error::InvalidCombination),
+            (Identifier::All, Amount::Shares(_)) => return Err(Error::InvalidCombination),
             _ => (),
         }
         Ok(PositionIntent {
@@ -112,7 +112,7 @@ impl PositionIntentBuilder {
             strategy: self.strategy,
             sub_strategy: self.sub_strategy,
             timestamp: Utc::now(),
-            ticker: self.ticker,
+            identifier: self.identifier,
             amount: self.amount,
             update_policy: self.update_policy,
             decision_price: self.decision_price,
@@ -136,7 +136,7 @@ pub struct PositionIntent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_strategy: Option<String>,
     pub timestamp: DateTime<Utc>,
-    pub ticker: TickerSpec,
+    pub identifier: Identifier,
     pub amount: Amount,
     pub update_policy: UpdatePolicy,
     /// The price at which the decision was made to send a position request. This can be used by
@@ -157,13 +157,13 @@ pub struct PositionIntent {
 impl PositionIntent {
     pub fn builder(
         strategy: impl Into<String>,
-        ticker: impl Into<TickerSpec>,
+        identifier: impl Into<Identifier>,
         amount: Amount,
     ) -> PositionIntentBuilder {
         PositionIntentBuilder {
             strategy: strategy.into(),
             sub_strategy: None,
-            ticker: ticker.into(),
+            identifier: identifier.into(),
             amount,
             update_policy: UpdatePolicy::Update,
             decision_price: None,

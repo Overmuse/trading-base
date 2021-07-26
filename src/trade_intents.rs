@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(tag = "order_type")]
+#[serde(tag = "order_type", rename_all = "snake_case")]
 pub enum OrderType {
     Market,
     Limit {
@@ -37,9 +37,7 @@ pub enum TimeInForce {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct TradeIntent {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub position_intent_id: Option<Uuid>,
-    pub symbol: String,
+    pub ticker: String,
     pub qty: isize,
     #[serde(flatten)]
     pub order_type: OrderType,
@@ -47,11 +45,10 @@ pub struct TradeIntent {
 }
 
 impl TradeIntent {
-    pub fn new(symbol: impl Into<String>, qty: isize) -> Self {
+    pub fn new(ticker: impl Into<String>, qty: isize) -> Self {
         Self {
             id: Uuid::new_v4(),
-            position_intent_id: None,
-            symbol: symbol.into(),
+            ticker: ticker.into(),
             qty,
             order_type: OrderType::Market,
             time_in_force: TimeInForce::Day,
@@ -60,11 +57,6 @@ impl TradeIntent {
 
     pub fn id(mut self, id: Uuid) -> Self {
         self.id = id;
-        self
-    }
-
-    pub fn position_intent_id(mut self, id: Uuid) -> Self {
-        self.position_intent_id = Some(id);
         self
     }
 
@@ -87,7 +79,6 @@ mod test {
     fn can_serialize_and_deserialize() {
         let intent = TradeIntent::new("AAPL", 10)
             .id(Uuid::new_v4())
-            .position_intent_id(Uuid::new_v4())
             .order_type(OrderType::StopLimit {
                 stop_price: Decimal::new(100, 0),
                 limit_price: Decimal::new(101, 0),

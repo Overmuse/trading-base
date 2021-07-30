@@ -31,6 +31,30 @@ impl Amount {
             (x, y) => Err(Error::IncompatibleAmountError(x, y)),
         }
     }
+
+    pub const fn is_zero(&self) -> bool {
+        match self {
+            Amount::Dollars(x) => x.is_zero(),
+            Amount::Shares(x) => x.is_zero(),
+            Amount::Zero => true,
+        }
+    }
+
+    pub const fn is_sign_positive(&self) -> bool {
+        match self {
+            Amount::Dollars(x) => x.is_sign_positive(),
+            Amount::Shares(x) => x.is_sign_positive(),
+            Amount::Zero => false,
+        }
+    }
+
+    pub const fn is_sign_negative(&self) -> bool {
+        match self {
+            Amount::Dollars(x) => x.is_sign_negative(),
+            Amount::Shares(x) => x.is_sign_negative(),
+            Amount::Zero => false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

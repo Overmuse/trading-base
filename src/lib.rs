@@ -6,7 +6,7 @@ pub use position_intents::{
     Amount, Identifier, PositionIntent, PositionIntentBuilder, UpdatePolicy,
 };
 mod trade_intents;
-pub use trade_intents::{OrderType, TimeInForce, TradeIntent};
+pub use trade_intents::{OrderType, TimeInForce, TradeIntent, TradeMessage};
 
 #[derive(Error, Clone, Debug)]
 pub enum Error {

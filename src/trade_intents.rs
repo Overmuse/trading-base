@@ -71,6 +71,13 @@ impl TradeIntent {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(tag = "action", rename_all = "snake_case")]
+pub enum TradeMessage {
+    New { intent: TradeIntent },
+    Cancel { id: Uuid },
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -84,8 +91,15 @@ mod test {
                 limit_price: Decimal::new(101, 0),
             })
             .time_in_force(TimeInForce::ImmediateOrCancel);
-        let serialized = serde_json::to_string(&intent).unwrap();
-        let deserialized = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(intent, deserialized);
+        let new_message = TradeMessage::New {
+            intent: intent.clone(),
+        };
+        let cancel_message = TradeMessage::Cancel { id: intent.id };
+        let new_serialized = serde_json::to_string(&new_message).unwrap();
+        let new_deserialized = serde_json::from_str(&new_serialized).unwrap();
+        let cancel_serialized = serde_json::to_string(&cancel_message).unwrap();
+        let cancel_deserialized = serde_json::from_str(&cancel_serialized).unwrap();
+        assert_eq!(new_message, new_deserialized);
+        assert_eq!(cancel_message, cancel_deserialized);
     }
 }
